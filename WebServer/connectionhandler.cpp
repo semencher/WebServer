@@ -46,7 +46,7 @@ void ConnectionHandler::handlerThread()
 
 
 
-	char buffer[IN_BUFFER_SIZE];
+	char buffer[IN_BUFFER_SIZE + 1];
 	while (!forTerminateThread_)
 	{
 
@@ -61,7 +61,6 @@ void ConnectionHandler::handlerThread()
 				if (FD_ISSET(socket_, &readfds))
 				{
 					int result = 0;
-					int sizeBuffer = 400;
 					std::string nameFile;
 					int read = recv(socket_, buffer, IN_BUFFER_SIZE, 0);
 					if (read > 0) {
@@ -107,17 +106,17 @@ void ConnectionHandler::handlerThread()
 						}
 
 						int sent = 0;
-						while (length > sizeBuffer) {
-							file.read(buffer, sizeBuffer);
-							buffer[sizeBuffer] = '\0';
-							result = send(socket_, buffer, sizeBuffer, 0);
+						while (length > IN_BUFFER_SIZE) {
+							file.read(buffer, IN_BUFFER_SIZE);
+							buffer[IN_BUFFER_SIZE] = '\0';
+							result = send(socket_, buffer, IN_BUFFER_SIZE, 0);
 							if (result == SOCKET_ERROR)
 							{
 								printf("send from client failed with error: %d\n", WSAGetLastError());
 								break;
 							}
 							sent += result;
-							length = length - sizeBuffer;
+							length = length - IN_BUFFER_SIZE;
 						}
 						if (length > 0) {
 							file.read(buffer, length);
@@ -138,7 +137,5 @@ void ConnectionHandler::handlerThread()
 	shutdown(socket_, 2);
 	closesocket(socket_);
 }
-
-// Сложный пример.
 // Реакция на запрещенный ресурс.
 // Тип контента менять для разных типов.
