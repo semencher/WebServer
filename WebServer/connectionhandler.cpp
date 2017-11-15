@@ -51,9 +51,7 @@ void ConnectionHandler::handlerThread()
 	struct timeval tv;
 	tv.tv_sec = 1;
 	tv.tv_usec = 0;
-
-
-
+	
 	char buffer[IN_BUFFER_SIZE + 1];
 	while (!forTerminateThread_)
 	{
