@@ -60,48 +60,85 @@ void ConnectionHandler::handlerThread()
 			if (rv != 0) {
 				if (FD_ISSET(socket_, &readfds))
 				{
+					int result = 0;
+					int sizeBuffer = 400;
+					std::string nameFile;
 					int read = recv(socket_, buffer, IN_BUFFER_SIZE, 0);
 					if (read > 0) {
 						std::string str(buffer);
 						// TODO: Убрать эту строчку когда закончу.
 						std::cout << "\n" << str << "\n";
+						int i = 5;
+						while (true) {
+							if (str[i] == ' ') {
+								break;
+							}
+							nameFile += str[i];
+							++i;
+						}
+						if (nameFile == "") {
+							nameFile = "index.html";
+						}
+						else {
+							// Проверить на неккоректное имя, и ответить сайту что мы это не дадим.
+						}
+						std::cout << "\n" + nameFile + "\n";
 
 						std::string page;
 						std::fstream file;
-						file.open("index.html", std::ios::in | std::ios::binary);
+						file.open(nameFile, std::ios::in | std::ios::binary);
 
 						file.seekg(0, std::ios::end);
 						size_t length = static_cast<size_t>(file.tellg());
 						file.seekg(0, std::ios::beg);
 
-						while (length > IN_BUFFER_SIZE) {
-							file.read(buffer, IN_BUFFER_SIZE);
-							page += std::string(buffer);
-							length -= IN_BUFFER_SIZE;
-						}
-						if (length > 0) {
-							file.read(buffer, length);
-							buffer[length] = '\0';
-							page += std::string(buffer);
-						}
+						std::string answer = "HTTP/1.1 200 OK\r\n";
+						answer += "Server: localhost:21345\r\n";
+						answer += "Content - Language : ru\r\n";
+						answer += "Content - Type : text / html; charset = utf - 8\r\n";
+						answer += "Content - Length: " + std::to_string(length) + "\r\n";
+						answer += "Connection : close \r\n\r\n";
 
-						std::string answer = "HTTP/1.1 200 OK\n";
-						answer += "Server: localhost:21345\n";
-						answer += "Content - Language : ru\n";
-						answer += "Content - Type : text / html; charset = utf - 8\n";
-						answer += "Content - Length: " + std::to_string(page.size()) + "\n";
-						answer += "Connection : close \n\n";
-						answer += page;
-
-						// Отправляем ответ.
-						int result = send(socket_, answer.c_str(), answer.size(), 0);
+						result = send(socket_, answer.c_str(), answer.size(), 0);
 						if (result == SOCKET_ERROR)
 						{
 							printf("send from client failed with error: %d\n", WSAGetLastError());
 							break;
 						}
+
+						int sent = 0;
+						while (length > sizeBuffer) {
+							file.read(buffer, sizeBuffer);
+							buffer[sizeBuffer] = '\0';
+							result = send(socket_, buffer, sizeBuffer, 0);
+							if (result == SOCKET_ERROR)
+							{
+								printf("send from client failed with error: %d\n", WSAGetLastError());
+								break;
+							}
+							sent += result;
+							length = length - sizeBuffer;
+						}
+						if (length > 0) {
+							file.read(buffer, length);
+							buffer[length] = '\0';
+							result = send(socket_, buffer, length, 0);
+							if (result == SOCKET_ERROR)
+							{
+								printf("send from client failed with error: %d\n", WSAGetLastError());
+								break;
+							}
+							sent += result;
+						}
+						forTerminateThread_ = true;
 					}
 				}
 			}
 	}
+	shutdown(socket_, 2);
+	closesocket(socket_);
 }
+
+// Сложный пример.
+// Реакция на запрещенный ресурс.
+// Тип контента менять для разных типов.
