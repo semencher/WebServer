@@ -1,6 +1,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #include "connectionhandler.h"
 
@@ -38,6 +39,13 @@ DWORD WINAPI ConnectionHandler::handlerThreadStatic(void *param)
 
 void ConnectionHandler::handlerThread()
 {
+	std::vector<std::string> names;
+	names.push_back("index.html");
+	names.push_back("favicon.ico");
+	names.push_back("leo.jpg");
+	names.push_back("leo.mp4");
+	names.push_back("s.jpg");
+
 	fd_set readfds;
 	FD_ZERO(&readfds);
 	struct timeval tv;
@@ -66,7 +74,6 @@ void ConnectionHandler::handlerThread()
 					if (read > 0) {
 						std::string str(buffer);
 						// TODO: Убрать эту строчку когда закончу.
-						std::cout << "\n" << str << "\n";
 						int i = 5;
 						while (true) {
 							if (str[i] == ' ') {
@@ -79,7 +86,21 @@ void ConnectionHandler::handlerThread()
 							nameFile = "index.html";
 						}
 						else {
-							// Проверить на неккоректное имя, и ответить сайту что мы это не дадим.
+							if (std::find(names.begin(), names.end(), nameFile) == names.end()) {
+								std::string answer = "HTTP/1.1 403\r\n";
+								answer += "Server: localhost:21345\r\n";
+								answer += "Content - Language : ru\r\n";
+								answer += "Connection : close \r\n\r\n";
+
+								result = send(socket_, answer.c_str(), answer.size(), 0);
+								if (result == SOCKET_ERROR)
+								{
+									printf("send from client failed with error: %d\n", WSAGetLastError());
+									break;
+								}
+								forTerminateThread_ = true;
+								continue;
+							}
 						}
 						std::cout << "\n" + nameFile + "\n";
 
@@ -137,5 +158,3 @@ void ConnectionHandler::handlerThread()
 	shutdown(socket_, 2);
 	closesocket(socket_);
 }
-// Реакция на запрещенный ресурс.
-// Тип контента менять для разных типов.
